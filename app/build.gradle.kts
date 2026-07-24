@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
+    // AGP 9.0+ has built-in Kotlin support - do NOT apply org.jetbrains.kotlin.android
 }
 
 android {
