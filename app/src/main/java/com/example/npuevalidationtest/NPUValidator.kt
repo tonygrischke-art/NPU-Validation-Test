@@ -19,7 +19,6 @@ class NPUValidator {
         // Step 1: Check if NPU accelerator is available
         logCallback("Step 1: Checking NPU accelerator availability...")
         try {
-            // Check if the NPU enum value exists (it does in 2.1.5)
             val npuAccelerator = Accelerator.NPU
             logCallback("  ✅ Accelerator.NPU enum exists: $npuAccelerator")
         } catch (e: Exception) {
@@ -29,16 +28,10 @@ class NPUValidator {
 
         // Step 2: Load TFLite model from assets
         logCallback("Step 2: Loading TFLite model from assets...")
-        val modelBuffer: ByteBuffer
         try {
             val inputStream = context.assets.open("test_model.tflite")
             val modelBytes = inputStream.readAllBytes()
             inputStream.close()
-            
-            modelBuffer = ByteBuffer.allocateDirect(modelBytes.size)
-            modelBuffer.order(ByteOrder.nativeOrder())
-            modelBuffer.put(modelBytes)
-            modelBuffer.rewind()
             
             logCallback("  Model loaded: ${modelBytes.size} bytes (${modelBytes.size / 1024} KB)")
         } catch (e: Exception) {
@@ -53,7 +46,7 @@ class NPUValidator {
             // Create options with NPU accelerator
             val options = CompiledModel.Options(Accelerator.NPU)
             
-            // Create environment (required for CompiledModel.create)
+            // Create environment
             val environment = Environment()
             
             logCallback("  Compiling model with NPU accelerator (this triggers NPU JIT compilation)...")
@@ -71,7 +64,7 @@ class NPUValidator {
             // Step 4: Test inference
             logCallback("Step 4: Running inference to verify NPU execution...")
             
-            // Get input/output tensor info
+            // Get input/output tensor names
             val inputNames = compiledModel.inputTensorNames
             val outputNames = compiledModel.outputTensorNames
             logCallback("  Input tensors: $inputNames")
@@ -85,11 +78,7 @@ class NPUValidator {
 
             // Fill input with dummy data (1.0f for all elements)
             inputBuffers.forEach { buffer ->
-                val floatArray = FloatArray(buffer.capacity / 4)
-                floatArray.fill(1.0f) // Simple test pattern
-                buffer.rewind()
-                buffer.put(floatArray)
-                buffer.rewind()
+                buffer.writeFloat(FloatArray(buffer.capacity / 4) { 1.0f })
             }
 
             // Run inference - this executes on NPU
@@ -103,10 +92,8 @@ class NPUValidator {
 
             // Print output sample
             outputBuffers.forEachIndexed { index, buffer ->
-                val floatArray = FloatArray(buffer.capacity / 4)
-                buffer.rewind()
-                buffer.get(floatArray)
-                val sample = floatArray.take(5).joinToString(", ")
+                val outputData = buffer.readFloat()
+                val sample = outputData.take(5).joinToString(", ")
                 logCallback("  Output $index sample: [$sample]")
             }
 
