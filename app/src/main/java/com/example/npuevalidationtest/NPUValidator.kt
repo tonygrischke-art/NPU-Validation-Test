@@ -90,8 +90,12 @@ class NPUValidator {
             logCallback("  Created ${inputBuffers.size} input buffers, ${outputBuffers.size} output buffers")
 
             // Fill input with dummy data (1.0f for all elements)
-            inputBuffers.forEach { buffer ->
-                buffer.writeFloat(FloatArray(buffer.capacity / 4) { 1.0f })
+            // Use getInputBufferRequirements to get buffer sizes
+            inputBuffers.forEachIndexed { index, buffer ->
+                val requirements = compiledModel.getInputBufferRequirements(index.toString(), "")
+                val bufferSize = requirements.getBufferSize()
+                val floatCount = bufferSize / 4
+                buffer.writeFloat(FloatArray(floatCount) { 1.0f })
             }
 
             // Run inference - this executes on NPU
