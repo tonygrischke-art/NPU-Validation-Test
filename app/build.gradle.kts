@@ -34,7 +34,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     
-    // LiteRT - using version that exists on Google Maven
-    implementation("com.google.ai.edge.litert:litert:2.0.0")
-    implementation("com.google.ai.edge.litert:litert-support:2.0.0")
+    // LiteRT - use same version as cipher-android (available on Google Maven)
+    implementation("com.google.ai.edge.litert:litert:2.1.5")
+    implementation("com.google.ai.edge.litert:litert-support:2.1.5")
 }
