@@ -36,5 +36,5 @@ dependencies {
     
     // LiteRT - use same version as cipher-android (available on Google Maven)
     implementation("com.google.ai.edge.litert:litert:2.1.5")
-    implementation("com.google.ai.edge.litert:litert-support:2.1.5")
+    // litert-support may not be available; NPU delegate is in main litert artifact
 }
