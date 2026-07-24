@@ -32,7 +32,7 @@ class NPUValidator {
             val inputStream = context.assets.open("test_model.tflite")
             val modelBytes = inputStream.readAllBytes()
             inputStream.close()
-            
+
             logCallback("  Model loaded: ${modelBytes.size} bytes (${modelBytes.size / 1024} KB)")
         } catch (e: Exception) {
             logCallback("  ❌ Failed to load model: ${e.message}")
@@ -64,12 +64,6 @@ class NPUValidator {
             // Step 4: Test inference
             logCallback("Step 4: Running inference to verify NPU execution...")
             
-            // Get input/output tensor names
-            val inputNames = compiledModel.inputTensorNames
-            val outputNames = compiledModel.outputTensorNames
-            logCallback("  Input tensors: $inputNames")
-            logCallback("  Output tensors: $outputNames")
-
             // Create input/output buffers
             val inputBuffers = compiledModel.createInputBuffers()
             val outputBuffers = compiledModel.createOutputBuffers()
