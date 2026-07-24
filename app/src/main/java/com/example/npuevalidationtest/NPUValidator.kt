@@ -3,8 +3,10 @@ package com.example.npuevalidationtest
 import android.content.Context
 import android.util.Log
 import com.google.ai.edge.litert.*
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import com.google.ai.edge.litert.Accelerator
+import com.google.ai.edge.litert.CompiledModel
+import com.google.ai.edge.litert.Environment
+import com.google.ai.edge.litert.TensorBuffer
 
 class NPUValidator {
 
@@ -26,8 +28,25 @@ class NPUValidator {
             return false
         }
 
-        // Step 2: Load TFLite model from assets
-        logCallback("Step 2: Loading TFLite model from assets...")
+        // Step 2: Check available accelerators via Environment
+        logCallback("Step 2: Checking available accelerators via Environment...")
+        try {
+            val environment = Environment.create()
+            val availableAccelerators = environment.getAvailableAccelerators()
+            logCallback("  Available accelerators: $availableAccelerators")
+            val hasNpu = availableAccelerators.contains(Accelerator.NPU)
+            if (!hasNpu) {
+                logCallback("  ⚠️ NPU not in available accelerators (may not be supported on this device/emulator)")
+            } else {
+                logCallback("  ✅ NPU is available!")
+            }
+            environment.close()
+        } catch (e: Exception) {
+            logCallback("  ❌ Failed to check available accelerators: ${e.message}")
+        }
+
+        // Step 3: Load TFLite model from assets
+        logCallback("Step 3: Loading TFLite model from assets...")
         try {
             val inputStream = context.assets.open("test_model.tflite")
             val modelBytes = inputStream.readAllBytes()
@@ -40,17 +59,17 @@ class NPUValidator {
             return false
         }
 
-        // Step 3: Create CompiledModel with NPU accelerator
-        logCallback("Step 3: Creating CompiledModel with Accelerator.NPU...")
+        // Step 4: Create CompiledModel with NPU accelerator
+        logCallback("Step 4: Creating CompiledModel with Accelerator.NPU...")
         try {
             // Create options with NPU accelerator
             val options = CompiledModel.Options(Accelerator.NPU)
-            
+
             // Create environment
-            val environment = Environment()
-            
+            val environment = Environment.create()
+
             logCallback("  Compiling model with NPU accelerator (this triggers NPU JIT compilation)...")
-            
+
             // Create CompiledModel from asset file
             val compiledModel = CompiledModel.create(
                 context.assets,
@@ -58,16 +77,16 @@ class NPUValidator {
                 options,
                 environment
             )
-            
+
             logCallback("  ✅ CompiledModel created successfully!")
 
-            // Step 4: Test inference
-            logCallback("Step 4: Running inference to verify NPU execution...")
-            
+            // Step 5: Test inference
+            logCallback("Step 5: Running inference to verify NPU execution...")
+
             // Create input/output buffers
             val inputBuffers = compiledModel.createInputBuffers()
             val outputBuffers = compiledModel.createOutputBuffers()
-            
+
             logCallback("  Created ${inputBuffers.size} input buffers, ${outputBuffers.size} output buffers")
 
             // Fill input with dummy data (1.0f for all elements)
@@ -81,7 +100,7 @@ class NPUValidator {
             compiledModel.run(inputBuffers, outputBuffers)
             val endTime = System.nanoTime()
             val durationMs = (endTime - startTime) / 1_000_000
-            
+
             logCallback("  ✅ Inference completed in ${durationMs} ms!")
 
             // Print output sample
@@ -93,6 +112,7 @@ class NPUValidator {
 
             // Clean up
             compiledModel.close()
+            environment.close()
             logCallback("=== NPU Validation Test PASSED ===")
             return true
 
