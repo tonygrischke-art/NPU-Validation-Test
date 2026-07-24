@@ -83,7 +83,7 @@ class NPUValidator {
             // Step 5: Test inference
             logCallback("Step 5: Running inference to verify NPU execution...")
 
-            // Create input/output buffers
+            // Create input/output buffers using the correct API (no args)
             val inputBuffers = compiledModel.createInputBuffers()
             val outputBuffers = compiledModel.createOutputBuffers()
 
