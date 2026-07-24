@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.npuevalidationtest"
-        minSdk = 34  // Android 14+ for LiteRT NPU
+        minSdk = 34
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -34,9 +34,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     
-    // LiteRT (Google AI Edge) - use versions from Google's Maven
-    implementation("com.google.ai.edge.litert:litert:1.18.0")
-    implementation("com.google.ai.edge.litert:litert-support:0.4.0")
-    
-    // NPU delegate is part of the main litert artifact in newer versions
+    // LiteRT - using version that exists on Google Maven
+    implementation("com.google.ai.edge.litert:litert:2.0.0")
+    implementation("com.google.ai.edge.litert:litert-support:2.0.0")
 }
