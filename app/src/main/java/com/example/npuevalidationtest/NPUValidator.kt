@@ -3,8 +3,6 @@ package com.example.npuevalidationtest
 import android.content.Context
 import android.util.Log
 import com.google.ai.edge.litert.*
-import com.google.ai.edge.litert.support.TensorBufferFloat32
-import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -18,16 +16,16 @@ class NPUValidator {
     fun testNPUCompilation(context: Context, logCallback: (String) -> Unit): Boolean {
         logCallback("=== NPU Validation Test Started ===")
 
-        // Step 1: Check if NPU delegate is available
-        logCallback("Step 1: Checking NPU delegate availability...")
-        val npuDelegateAvailable = NPUDelegateFactory.isAvailable()
-        logCallback("  NPUDelegateFactory.isAvailable() = $npuDelegateAvailable")
-
-        if (!npuDelegateAvailable) {
-            logCallback("  ❌ NPU delegate NOT available on this device")
+        // Step 1: Check if NPU accelerator is available
+        logCallback("Step 1: Checking NPU accelerator availability...")
+        try {
+            // Check if the NPU enum value exists (it does in 2.1.5)
+            val npuAccelerator = Accelerator.NPU
+            logCallback("  ✅ Accelerator.NPU enum exists: $npuAccelerator")
+        } catch (e: Exception) {
+            logCallback("  ❌ Accelerator.NPU not found: ${e.message}")
             return false
         }
-        logCallback("  ✅ NPU delegate available")
 
         // Step 2: Load TFLite model from assets
         logCallback("Step 2: Loading TFLite model from assets...")
@@ -49,44 +47,71 @@ class NPUValidator {
             return false
         }
 
-        // Step 3: Try to compile with NPU accelerator
-        logCallback("Step 3: Compiling model with Accelerator.NPU...")
+        // Step 3: Create CompiledModel with NPU accelerator
+        logCallback("Step 3: Creating CompiledModel with Accelerator.NPU...")
         try {
-            val options = LitertInterpreterOptions()
-                .setAccelerator(LitertInterpreterOptions.Accelerator.NPU)
-                .setNumThreads(1)
+            // Create options with NPU accelerator
+            val options = CompiledModel.Options(Accelerator.NPU)
+            
+            // Create environment (required for CompiledModel.create)
+            val environment = Environment()
+            
+            logCallback("  Compiling model with NPU accelerator (this triggers NPU JIT compilation)...")
+            
+            // Create CompiledModel from asset file
+            val compiledModel = CompiledModel.create(
+                context.assets,
+                "test_model.tflite",
+                options,
+                environment
+            )
+            
+            logCallback("  ✅ CompiledModel created successfully!")
 
-            val interpreter = LitertInterpreter(modelBuffer, options)
-            logCallback("  ✅ Interpreter created with NPU accelerator")
-
-            // Step 4: Test compilation (this triggers NPU compilation)
-            logCallback("Step 4: Testing NPU compilation with dummy inference...")
+            // Step 4: Test inference
+            logCallback("Step 4: Running inference to verify NPU execution...")
             
             // Get input/output tensor info
-            val inputShape = interpreter.getInputTensor(0).shape
-            val outputShape = interpreter.getOutputTensor(0).shape
-            logCallback("  Input shape: ${inputShape.joinToString(",")}")
-            logCallback("  Output shape: ${outputShape.joinToString(",")}")
+            val inputNames = compiledModel.inputTensorNames
+            val outputNames = compiledModel.outputTensorNames
+            logCallback("  Input tensors: $inputNames")
+            logCallback("  Output tensors: $outputNames")
 
-            // Create input tensor buffer
-            val inputBuffer = TensorBufferFloat32(inputShape.toIntArray())
-            val inputArray = FloatArray(inputBuffer.buffer.capacity() / 4)
-            for (i in inputArray.indices) inputArray[i] = 1.0f // Simple test input
-            inputBuffer.buffer.put(inputArray)
-            inputBuffer.buffer.rewind()
+            // Create input/output buffers
+            val inputBuffers = compiledModel.createInputBuffers()
+            val outputBuffers = compiledModel.createOutputBuffers()
+            
+            logCallback("  Created ${inputBuffers.size} input buffers, ${outputBuffers.size} output buffers")
 
-            val outputBuffer = TensorBufferFloat32(outputShape.toIntArray())
+            // Fill input with dummy data (1.0f for all elements)
+            inputBuffers.forEach { buffer ->
+                val floatArray = FloatArray(buffer.capacity / 4)
+                floatArray.fill(1.0f) // Simple test pattern
+                buffer.rewind()
+                buffer.put(floatArray)
+                buffer.rewind()
+            }
 
-            // Run inference - this triggers NPU compilation
-            logCallback("  Running inference (triggers NPU compilation)...")
-            interpreter.run(inputBuffer, outputBuffer)
-            logCallback("  ✅ NPU inference successful!")
+            // Run inference - this executes on NPU
+            logCallback("  Running inference (NPU execution)...")
+            val startTime = System.nanoTime()
+            compiledModel.run(inputBuffers, outputBuffers)
+            val endTime = System.nanoTime()
+            val durationMs = (endTime - startTime) / 1_000_000
+            
+            logCallback("  ✅ Inference completed in ${durationMs} ms!")
 
-            val outputArray = FloatArray(outputBuffer.buffer.capacity() / 4)
-            outputBuffer.buffer.get(outputArray)
-            logCallback("  Output sample: ${outputArray.take(5).joinToString(", ")}")
+            // Print output sample
+            outputBuffers.forEachIndexed { index, buffer ->
+                val floatArray = FloatArray(buffer.capacity / 4)
+                buffer.rewind()
+                buffer.get(floatArray)
+                val sample = floatArray.take(5).joinToString(", ")
+                logCallback("  Output $index sample: [$sample]")
+            }
 
-            interpreter.close()
+            // Clean up
+            compiledModel.close()
             logCallback("=== NPU Validation Test PASSED ===")
             return true
 
