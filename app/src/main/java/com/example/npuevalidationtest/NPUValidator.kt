@@ -93,7 +93,7 @@ class NPUValidator {
             // Use getInputBufferRequirements to get buffer sizes
             inputBuffers.forEachIndexed { index, buffer ->
                 val requirements = compiledModel.getInputBufferRequirements(index.toString(), "")
-                val bufferSize = requirements.getBufferSize()
+                val bufferSize = requirements.bufferSize
                 val floatCount = bufferSize / 4
                 buffer.writeFloat(FloatArray(floatCount) { 1.0f })
             }
