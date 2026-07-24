@@ -83,19 +83,15 @@ class NPUValidator {
             // Step 5: Test inference
             logCallback("Step 5: Running inference to verify NPU execution...")
 
-            // Create input/output buffers using the correct API (no args)
+            // Create input/output buffers using the correct API (no args - like mobilenet sample)
             val inputBuffers = compiledModel.createInputBuffers()
             val outputBuffers = compiledModel.createOutputBuffers()
 
             logCallback("  Created ${inputBuffers.size} input buffers, ${outputBuffers.size} output buffers")
 
             // Fill input with dummy data (1.0f for all elements)
-            // Use getInputBufferRequirements to get buffer sizes
-            inputBuffers.forEachIndexed { index, buffer ->
-                val requirements = compiledModel.getInputBufferRequirements(index.toString(), "")
-                val bufferSize = requirements.bufferSize
-                val floatCount = bufferSize / 4
-                buffer.writeFloat(FloatArray(floatCount) { 1.0f })
+            inputBuffers.forEach { buffer ->
+                buffer.writeFloat(FloatArray(buffer.capacity / 4) { 1.0f })
             }
 
             // Run inference - this executes on NPU
